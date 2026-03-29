@@ -33,7 +33,7 @@ export default function LeavesPage() {
 
   const [userId, setUserId] = useState("");
   const [fullName, setFullName] = useState("");
-  const [loadingPage, setLoadingPage] = useState(true);
+  const [loadingPage, setLoadingPage] = useState(false);
   const [uploadingType, setUploadingType] = useState("");
   const [leaves, setLeaves] = useState<UploadedLeave[]>([]);
   const [error, setError] = useState("");
