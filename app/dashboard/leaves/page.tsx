@@ -122,12 +122,15 @@ export default function LeavesPage() {
   }
 
   if (loadingPage) {
+
     return (
+      <EmployeeGuard>
       <main style={styles.page}>
         <div style={styles.card}>
           <p>Loading...</p>
         </div>
       </main>
+      </EmployeeGuard>
     );
   }
 
