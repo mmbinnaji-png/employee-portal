@@ -82,20 +82,24 @@ export default function AdminEmployeesPage() {
         <div style={styles.list}>
           {filteredEmployees.map((employee) => (
             <div key={employee.id} style={styles.item}>
-              <div>
-                <p style={styles.name}>{employee.fullName}</p>
-                <p style={styles.meta}>Employee ID: {employee.employeeId}</p>
-                <p style={styles.meta}>Department: {employee.department}</p>
-                <p style={styles.meta}>{employee.email}</p>
-              </div>
+  <div style={styles.itemTop}>
+    <div style={styles.itemInfo}>
+      <p style={styles.name}>{employee.fullName}</p>
+      <p style={styles.meta}>Employee ID: {employee.employeeId}</p>
+      <p style={styles.meta}>Department: {employee.department}</p>
+      <p style={styles.meta}>{employee.email}</p>
+    </div>
+  </div>
 
-              <a
-                href={`/admin/employees/${employee.id}`}
-                style={styles.viewButton}
-              >
-                View Profile
-              </a>
-            </div>
+  <div style={styles.itemButtons}>
+    <a
+      href={`/admin/employees/${employee.id}`}
+      style={styles.viewButton}
+    >
+      View Profile
+    </a>
+  </div>
+</div>
           ))}
         </div>
 
@@ -132,7 +136,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   subtitle: {
     textAlign: "center",
-    color: "#526071",
+    color: "#475569",
     marginBottom: "24px",
   },
   input: {
@@ -145,7 +149,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   info: {
     textAlign: "center",
-    color: "#526071",
+   color: "#475569",
     marginBottom: "16px",
   },
   error: {
@@ -159,33 +163,55 @@ const styles: Record<string, React.CSSProperties> = {
     gap: "12px",
   },
   item: {
-    border: "1px solid #dce3ee",
-    borderRadius: "12px",
-    padding: "16px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "16px",
-  },
+  border: "1px solid #dce3ee",
+  borderRadius: "16px",
+  padding: "18px",
+  background: "#ffffff",
+  display: "flex",
+  flexDirection: "column",
+  gap: "16px",
+},
   name: {
-    margin: 0,
-    fontWeight: 700,
-    fontSize: "18px",
-  },
+  margin: 0,
+  fontWeight: 800,
+  fontSize: "22px",
+  color: "#0f172a",
+  lineHeight: 1.3,
+},
   meta: {
-    margin: "6px 0 0 0",
-    color: "#526071",
-    fontSize: "14px",
-  },
+  margin: "8px 0 0 0",
+  color: "#334155",
+  fontSize: "16px",
+  lineHeight: 1.5,
+},
+itemTop: {
+  display: "flex",
+  flexDirection: "column",
+},
+
+itemInfo: {
+  display: "flex",
+  flexDirection: "column",
+},
+
+itemButtons: {
+  display: "flex",
+  justifyContent: "center",
+  marginTop: "4px",
+},
   viewButton: {
-    background: "#163b73",
-    color: "#ffffff",
-    textDecoration: "none",
-    padding: "10px 16px",
-    borderRadius: "10px",
-    fontWeight: 600,
-    whiteSpace: "nowrap",
-  },
+  background: "#163b73",
+  color: "#ffffff",
+  textDecoration: "none",
+  padding: "12px 18px",
+  borderRadius: "12px",
+  fontWeight: 700,
+  whiteSpace: "nowrap",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minWidth: "160px",
+},
   backButton: {
     display: "inline-block",
     marginTop: "24px",
