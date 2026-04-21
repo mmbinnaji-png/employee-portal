@@ -1,4 +1,5 @@
 "use client";
+
 import EmployeeGuard from "@/components/EmployeeGuard";
 import { ChangeEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -104,8 +105,20 @@ export default function DocumentsPage() {
         uploadedAt: serverTimestamp(),
       });
 
+      await addDoc(collection(db, "notifications"), {
+        type: "document_upload",
+        title: "New document uploaded",
+        message: `${type.replaceAll("_", " ")} uploaded by employee`,
+        employeeUid: userId,
+        documentType: type,
+        fileName: file.name,
+        fileUrl,
+        createdAt: serverTimestamp(),
+        forAdmins: true,
+      });
+
       await loadDocuments(userId);
-      setSuccess(`${type.replace("_", " ")} uploaded successfully.`);
+      setSuccess(`${type.replaceAll("_", " ")} uploaded successfully.`);
       e.target.value = "";
     } catch (err: any) {
       setError(err.message || "Upload failed.");
@@ -126,70 +139,70 @@ export default function DocumentsPage() {
 
   return (
     <EmployeeGuard>
-    <main style={styles.page}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>My Documents</h1>
-        <p style={styles.subtitle}>Upload your required work documents.</p>
+      <main style={styles.page}>
+        <div style={styles.card}>
+          <h1 style={styles.title}>My Documents</h1>
+          <p style={styles.subtitle}>Upload your required work documents.</p>
 
-        {error ? <p style={styles.error}>{error}</p> : null}
-        {success ? <p style={styles.success}>{success}</p> : null}
+          {error ? <p style={styles.error}>{error}</p> : null}
+          {success ? <p style={styles.success}>{success}</p> : null}
 
-        <div style={styles.uploadList}>
-          {documentTypes.map((docType) => (
-            <div key={docType.value} style={styles.uploadCard}>
-              <div>
-                <h3 style={styles.uploadTitle}>{docType.label}</h3>
-                <p style={styles.uploadText}>Choose a file to upload.</p>
-              </div>
-
-              <label style={styles.uploadButton}>
-                {uploadingType === docType.value ? "Uploading..." : "Upload File"}
-                <input
-                  type="file"
-                  style={{ display: "none" }}
-                  onChange={(e) => handleFileUpload(e, docType.value)}
-                  disabled={uploadingType === docType.value}
-                />
-              </label>
-            </div>
-          ))}
-        </div>
-
-        <div style={styles.section}>
-          <h2 style={styles.sectionTitle}>Uploaded Documents</h2>
-
-          {documents.length === 0 ? (
-            <p style={styles.emptyText}>No documents uploaded yet.</p>
-          ) : (
-            <div style={styles.documentList}>
-              {documents.map((doc) => (
-                <div key={doc.id} style={styles.documentItem}>
-                  <div>
-                    <p style={styles.docName}>{doc.fileName}</p>
-                    <p style={styles.docMeta}>
-                      Type: {doc.type.replaceAll("_", " ")}
-                    </p>
-                  </div>
-
-                  <a
-                    href={doc.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={styles.viewButton}
-                  >
-                    View
-                  </a>
+          <div style={styles.uploadList}>
+            {documentTypes.map((docType) => (
+              <div key={docType.value} style={styles.uploadCard}>
+                <div>
+                  <h3 style={styles.uploadTitle}>{docType.label}</h3>
+                  <p style={styles.uploadText}>Choose a file to upload.</p>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
 
-        <a href="/dashboard" style={styles.backButton}>
-          Back to Dashboard
-        </a>
-      </div>
-    </main>
+                <label style={styles.uploadButton}>
+                  {uploadingType === docType.value ? "Uploading..." : "Upload File"}
+                  <input
+                    type="file"
+                    style={{ display: "none" }}
+                    onChange={(e) => handleFileUpload(e, docType.value)}
+                    disabled={uploadingType === docType.value}
+                  />
+                </label>
+              </div>
+            ))}
+          </div>
+
+          <div style={styles.section}>
+            <h2 style={styles.sectionTitle}>Uploaded Documents</h2>
+
+            {documents.length === 0 ? (
+              <p style={styles.emptyText}>No documents uploaded yet.</p>
+            ) : (
+              <div style={styles.documentList}>
+                {documents.map((doc) => (
+                  <div key={doc.id} style={styles.documentItem}>
+                    <div>
+                      <p style={styles.docName}>{doc.fileName}</p>
+                      <p style={styles.docMeta}>
+                        Type: {doc.type.replaceAll("_", " ")}
+                      </p>
+                    </div>
+
+                    <a
+                      href={doc.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={styles.viewButton}
+                    >
+                      View
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <a href="/dashboard" style={styles.backButton}>
+            Back to Dashboard
+          </a>
+        </div>
+      </main>
     </EmployeeGuard>
   );
 }
@@ -215,6 +228,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     marginBottom: "8px",
     textAlign: "center",
+    color: "#0f172a",
   },
   subtitle: {
     textAlign: "center",
@@ -249,6 +263,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     fontSize: "18px",
     fontWeight: 600,
+    color: "#0f172a",
   },
   uploadText: {
     margin: "6px 0 0 0",
@@ -271,6 +286,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "22px",
     fontWeight: 700,
     marginBottom: "14px",
+    color: "#0f172a",
   },
   emptyText: {
     color: "#526071",
@@ -292,6 +308,7 @@ const styles: Record<string, React.CSSProperties> = {
   docName: {
     margin: 0,
     fontWeight: 600,
+    color: "#0f172a",
   },
   docMeta: {
     margin: "6px 0 0 0",
