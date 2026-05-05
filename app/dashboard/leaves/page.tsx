@@ -14,17 +14,21 @@ import {
   query,
   serverTimestamp,
 } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import {
+  getDownloadURL,
+  ref,
+  uploadBytes,
+} from "firebase/storage";
 import { auth, db, storage } from "@/lib/firebase";
 
 type LeaveItem = {
   id: string;
-  leaveType: string;
+  type: string;
   fileName: string;
   fileUrl: string;
+  uploadedAt?: any;
   employeeName?: string;
   employeeEmail?: string;
-  uploadedAt?: any;
 };
 
 const leaveTypes = [
@@ -52,20 +56,25 @@ export default function LeavesPage() {
         return;
       }
 
-      const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
 
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-        setEmployeeName(userData.fullName || "");
-        setEmployeeEmail(userData.email || user.email || "");
-      } else {
-        setEmployeeEmail(user.email || "");
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          setEmployeeName(userData.fullName || "");
+          setEmployeeEmail(userData.email || user.email || "");
+        } else {
+          setEmployeeEmail(user.email || "");
+        }
+
+        setUserId(user.uid);
+        await loadLeaves(user.uid);
+      } catch (err: any) {
+        setError(err.message || "Failed to load leaves.");
+      } finally {
+        setLoadingPage(false);
       }
-
-      setUserId(user.uid);
-      await loadLeaves(user.uid);
-      setLoadingPage(false);
     });
 
     return () => unsubscribe();
@@ -88,7 +97,7 @@ export default function LeavesPage() {
     }
   }
 
-  async function handleLeaveUpload(
+  async function handleFileUpload(
     e: ChangeEvent<HTMLInputElement>,
     type: string
   ) {
@@ -110,7 +119,7 @@ export default function LeavesPage() {
       const fileUrl = await getDownloadURL(storageRef);
 
       await addDoc(collection(db, "users", userId, "leaves"), {
-        leaveType: type,
+        type,
         fileName: file.name,
         fileUrl,
         employeeName,
@@ -130,6 +139,7 @@ export default function LeavesPage() {
         fileUrl,
         createdAt: serverTimestamp(),
         forAdmins: true,
+        read: false,
       });
 
       await loadLeaves(userId);
@@ -157,13 +167,11 @@ export default function LeavesPage() {
       <main style={styles.page}>
         <div style={styles.card}>
           <a href="/dashboard" style={styles.backButton}>
-            Back to Dashboard
+            ← Back to Dashboard
           </a>
 
           <h1 style={styles.title}>My Leaves</h1>
-          <p style={styles.subtitle}>
-            Upload your leave and work resumption files.
-          </p>
+          <p style={styles.subtitle}>Upload your leave-related files.</p>
 
           {error ? <p style={styles.error}>{error}</p> : null}
           {success ? <p style={styles.success}>{success}</p> : null}
@@ -181,7 +189,7 @@ export default function LeavesPage() {
                   <input
                     type="file"
                     style={{ display: "none" }}
-                    onChange={(e) => handleLeaveUpload(e, leaveType.value)}
+                    onChange={(e) => handleFileUpload(e, leaveType.value)}
                     disabled={uploadingType === leaveType.value}
                   />
                 </label>
@@ -201,7 +209,7 @@ export default function LeavesPage() {
                     <div>
                       <p style={styles.leaveName}>{leave.fileName}</p>
                       <p style={styles.leaveMeta}>
-                        Type: {leave.leaveType.replaceAll("_", " ")}
+                        Type: {leave.type.replaceAll("_", " ")}
                       </p>
                     </div>
 
@@ -242,7 +250,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   backButton: {
     display: "inline-block",
-    marginBottom: "18px",
+    marginBottom: "16px",
     textDecoration: "none",
     color: "#163b73",
     fontWeight: 600,
