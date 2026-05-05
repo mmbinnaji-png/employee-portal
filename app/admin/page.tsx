@@ -20,6 +20,9 @@ export default function AdminPage() {
         <p style={styles.text}>You are logged in as an admin.</p>
 
         <div style={styles.links}>
+          <a href="/admin/notifications" style={styles.actionButton}>
+             Notifications
+          </a>
           <a href="/admin/employees" style={styles.linkButton}>
             Employees
           </a>

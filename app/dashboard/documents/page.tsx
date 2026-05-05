@@ -7,6 +7,8 @@ import { onAuthStateChanged } from "firebase/auth";
 import {
   addDoc,
   collection,
+  doc,
+  getDoc,
   getDocs,
   orderBy,
   query,
@@ -38,12 +40,14 @@ const documentTypes = [
 export default function DocumentsPage() {
   const router = useRouter();
 
-  const [userId, setUserId] = useState("");
-  const [loadingPage, setLoadingPage] = useState(true);
-  const [uploadingType, setUploadingType] = useState("");
-  const [documents, setDocuments] = useState<UploadedDocument[]>([]);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+const [userId, setUserId] = useState("");
+const [employeeName, setEmployeeName] = useState("");
+const [employeeEmail, setEmployeeEmail] = useState("");
+const [loadingPage, setLoadingPage] = useState(true);
+const [uploadingType, setUploadingType] = useState("");
+const [documents, setDocuments] = useState<UploadedDocument[]>([]);
+const [error, setError] = useState("");
+const [success, setSuccess] = useState("");
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -52,9 +56,20 @@ export default function DocumentsPage() {
         return;
       }
 
-      setUserId(user.uid);
-      await loadDocuments(user.uid);
-      setLoadingPage(false);
+          const userRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+      const userData = userSnap.data();
+      setEmployeeName(userData.fullName || "");
+      setEmployeeEmail(userData.email || user.email || "");
+    } else {
+      setEmployeeEmail(user.email || "");
+    }
+
+    setUserId(user.uid);
+    await loadDocuments(user.uid);
+    setLoadingPage(false);
     });
 
     return () => unsubscribe();
@@ -97,25 +112,27 @@ export default function DocumentsPage() {
 
       await uploadBytes(storageRef, file);
       const fileUrl = await getDownloadURL(storageRef);
-
-      await addDoc(collection(db, "users", userId, "documents"), {
-        type,
-        fileName: file.name,
-        fileUrl,
-        uploadedAt: serverTimestamp(),
-      });
-
-      await addDoc(collection(db, "notifications"), {
-        type: "document_upload",
-        title: "New document uploaded",
-        message: `${type.replaceAll("_", " ")} uploaded by employee`,
-        employeeUid: userId,
-        documentType: type,
-        fileName: file.name,
-        fileUrl,
-        createdAt: serverTimestamp(),
-        forAdmins: true,
-      });
+ await addDoc(collection(db, "users", userId, "documents"), {
+  type,
+  fileName: file.name,
+  fileUrl,
+  employeeName,
+  employeeEmail,
+  uploadedAt: serverTimestamp(),
+});
+    await addDoc(collection(db, "notifications"), {
+  type: "document_upload",
+  title: "New document uploaded",
+  message: `${type.replaceAll("_", " ")} uploaded by ${employeeName || "employee"}`,
+  employeeUid: userId,
+  employeeName,
+  employeeEmail,
+  documentType: type,
+  fileName: file.name,
+  fileUrl,
+  createdAt: serverTimestamp(),
+  forAdmins: true,
+});
 
       await loadDocuments(userId);
       setSuccess(`${type.replaceAll("_", " ")} uploaded successfully.`);
