@@ -14,11 +14,7 @@ import {
   query,
   serverTimestamp,
 } from "firebase/firestore";
-import {
-  getDownloadURL,
-  ref,
-  uploadBytes,
-} from "firebase/storage";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { auth, db, storage } from "@/lib/firebase";
 
 type LeaveItem = {

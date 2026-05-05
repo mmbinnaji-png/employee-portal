@@ -20,16 +20,26 @@ export default function DashboardPage() {
         <p style={styles.text}>You are logged in as an employee.</p>
 
         <div style={styles.links}>
-          <a href="/dashboard/documents" style={styles.linkButton}>
-            My Documents
-          </a>
-          <a href="/dashboard/leaves" style={styles.linkButton}>
-            My Leaves
-          </a>
-          <a href="/dashboard/payslips" style={styles.linkButton}>
-            My Payslips
-          </a>
-        </div>
+  <a href="/dashboard/requests" style={styles.linkButton}>
+    My Requests
+  </a>
+
+  <a href="/dashboard/profile" style={styles.linkButton}>
+    My Profile
+  </a>
+
+  <a href="/dashboard/documents" style={styles.linkButton}>
+    My Documents
+  </a>
+
+  <a href="/dashboard/leaves" style={styles.linkButton}>
+    My Leaves
+  </a>
+
+  <a href="/dashboard/payslips" style={styles.linkButton}>
+    My Payslips
+  </a>
+</div>
 
         <button onClick={handleLogout} style={styles.logoutButton}>
           Logout
