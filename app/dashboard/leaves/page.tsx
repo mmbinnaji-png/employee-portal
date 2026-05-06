@@ -38,17 +38,15 @@ const leaveTypes = [
 ];
 
 export default function LeavesPage() {
-  const router = useRouter();
-
-  const [userId, setUserId] = useState("");
-  const [employeeName, setEmployeeName] = useState("");
-  const [employeeEmail, setEmployeeEmail] = useState("");
-  const [loadingPage, setLoadingPage] = useState(true);
-  const [uploadingType, setUploadingType] = useState("");
-  const [leaves, setLeaves] = useState<LeaveItem[]>([]);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
+const router = useRouter();
+const [userId, setUserId] = useState("");
+const [employeeName, setEmployeeName] = useState("");
+const [employeeEmail, setEmployeeEmail] = useState("");
+const [loadingPage, setLoadingPage] = useState(true);
+const [uploadingType, setUploadingType] = useState("");
+const [leaves, setLeaves] = useState<LeaveItem[]>([]);
+const [error, setError] = useState("");
+const [success, setSuccess] = useState("");
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {

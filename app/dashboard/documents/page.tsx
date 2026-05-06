@@ -26,6 +26,8 @@ type UploadedDocument = {
   type: string;
   fileName: string;
   fileUrl: string;
+  employeeName?: string;
+  employeeEmail?: string;
   uploadedAt?: any;
 };
 
@@ -40,14 +42,14 @@ const documentTypes = [
 export default function DocumentsPage() {
   const router = useRouter();
 
-const [userId, setUserId] = useState("");
-const [employeeName, setEmployeeName] = useState("");
-const [employeeEmail, setEmployeeEmail] = useState("");
-const [loadingPage, setLoadingPage] = useState(true);
-const [uploadingType, setUploadingType] = useState("");
-const [documents, setDocuments] = useState<UploadedDocument[]>([]);
-const [error, setError] = useState("");
-const [success, setSuccess] = useState("");
+  const [userId, setUserId] = useState("");
+  const [employeeName, setEmployeeName] = useState("");
+  const [employeeEmail, setEmployeeEmail] = useState("");
+  const [loadingPage, setLoadingPage] = useState(true);
+  const [uploadingType, setUploadingType] = useState("");
+  const [documents, setDocuments] = useState<UploadedDocument[]>([]);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -56,20 +58,25 @@ const [success, setSuccess] = useState("");
         return;
       }
 
-          const userRef = doc(db, "users", user.uid);
-    const userSnap = await getDoc(userRef);
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
 
-    if (userSnap.exists()) {
-      const userData = userSnap.data();
-      setEmployeeName(userData.fullName || "");
-      setEmployeeEmail(userData.email || user.email || "");
-    } else {
-      setEmployeeEmail(user.email || "");
-    }
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          setEmployeeName(userData.fullName || "");
+          setEmployeeEmail(userData.email || user.email || "");
+        } else {
+          setEmployeeEmail(user.email || "");
+        }
 
-    setUserId(user.uid);
-    await loadDocuments(user.uid);
-    setLoadingPage(false);
+        setUserId(user.uid);
+        await loadDocuments(user.uid);
+      } catch (err: any) {
+        setError(err.message || "Failed to load page.");
+      } finally {
+        setLoadingPage(false);
+      }
     });
 
     return () => unsubscribe();
@@ -81,9 +88,9 @@ const [success, setSuccess] = useState("");
       const q = query(docsRef, orderBy("uploadedAt", "desc"));
       const snapshot = await getDocs(q);
 
-      const items: UploadedDocument[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as Omit<UploadedDocument, "id">),
+      const items: UploadedDocument[] = snapshot.docs.map((docItem) => ({
+        id: docItem.id,
+        ...(docItem.data() as Omit<UploadedDocument, "id">),
       }));
 
       setDocuments(items);
@@ -112,27 +119,29 @@ const [success, setSuccess] = useState("");
 
       await uploadBytes(storageRef, file);
       const fileUrl = await getDownloadURL(storageRef);
- await addDoc(collection(db, "users", userId, "documents"), {
-  type,
-  fileName: file.name,
-  fileUrl,
-  employeeName,
-  employeeEmail,
-  uploadedAt: serverTimestamp(),
-});
-    await addDoc(collection(db, "notifications"), {
-  type: "document_upload",
-  title: "New document uploaded",
-  message: `${type.replaceAll("_", " ")} uploaded by ${employeeName || "employee"}`,
-  employeeUid: userId,
-  employeeName,
-  employeeEmail,
-  documentType: type,
-  fileName: file.name,
-  fileUrl,
-  createdAt: serverTimestamp(),
-  forAdmins: true,
-});
+
+      await addDoc(collection(db, "users", userId, "documents"), {
+        type,
+        fileName: file.name,
+        fileUrl,
+        employeeName,
+        employeeEmail,
+        uploadedAt: serverTimestamp(),
+      });
+
+      await addDoc(collection(db, "notifications"), {
+        type: "document_upload",
+        title: "New document uploaded",
+        message: `${type.replaceAll("_", " ")} uploaded by ${employeeName || "employee"}`,
+        employeeUid: userId,
+        employeeName,
+        employeeEmail,
+        documentType: type,
+        fileName: file.name,
+        fileUrl,
+        createdAt: serverTimestamp(),
+        forAdmins: true,
+      });
 
       await loadDocuments(userId);
       setSuccess(`${type.replaceAll("_", " ")} uploaded successfully.`);
@@ -158,6 +167,10 @@ const [success, setSuccess] = useState("");
     <EmployeeGuard>
       <main style={styles.page}>
         <div style={styles.card}>
+          <a href="/dashboard" style={styles.backButton}>
+            Back to Dashboard
+          </a>
+
           <h1 style={styles.title}>My Documents</h1>
           <p style={styles.subtitle}>Upload your required work documents.</p>
 
@@ -192,17 +205,20 @@ const [success, setSuccess] = useState("");
               <p style={styles.emptyText}>No documents uploaded yet.</p>
             ) : (
               <div style={styles.documentList}>
-                {documents.map((doc) => (
-                  <div key={doc.id} style={styles.documentItem}>
+                {documents.map((docItem) => (
+                  <div key={docItem.id} style={styles.documentItem}>
                     <div>
-                      <p style={styles.docName}>{doc.fileName}</p>
+                      <p style={styles.docName}>{docItem.fileName}</p>
                       <p style={styles.docMeta}>
-                        Type: {doc.type.replaceAll("_", " ")}
+                        Type: {docItem.type.replaceAll("_", " ")}
                       </p>
+                      {docItem.employeeName ? (
+                        <p style={styles.docMeta}>Employee: {docItem.employeeName}</p>
+                      ) : null}
                     </div>
 
                     <a
-                      href={doc.fileUrl}
+                      href={docItem.fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={styles.viewButton}
@@ -214,10 +230,6 @@ const [success, setSuccess] = useState("");
               </div>
             )}
           </div>
-
-          <a href="/dashboard" style={styles.backButton}>
-            Back to Dashboard
-          </a>
         </div>
       </main>
     </EmployeeGuard>
@@ -239,6 +251,13 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "16px",
     padding: "24px",
     boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+  },
+  backButton: {
+    display: "inline-block",
+    marginBottom: "20px",
+    textDecoration: "none",
+    color: "#163b73",
+    fontWeight: 600,
   },
   title: {
     fontSize: "32px",
@@ -341,12 +360,5 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "10px",
     fontWeight: 600,
     whiteSpace: "nowrap",
-  },
-  backButton: {
-    display: "inline-block",
-    marginTop: "24px",
-    textDecoration: "none",
-    color: "#163b73",
-    fontWeight: 600,
   },
 };
