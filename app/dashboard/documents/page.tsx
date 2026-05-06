@@ -14,11 +14,7 @@ import {
   query,
   serverTimestamp,
 } from "firebase/firestore";
-import {
-  getDownloadURL,
-  ref,
-  uploadBytes,
-} from "firebase/storage";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { auth, db, storage } from "@/lib/firebase";
 
 type UploadedDocument = {
@@ -141,6 +137,7 @@ export default function DocumentsPage() {
         fileUrl,
         createdAt: serverTimestamp(),
         forAdmins: true,
+        done: false,
       });
 
       await loadDocuments(userId);
@@ -155,11 +152,13 @@ export default function DocumentsPage() {
 
   if (loadingPage) {
     return (
-      <main style={styles.page}>
-        <div style={styles.card}>
-          <p>Loading...</p>
-        </div>
-      </main>
+      <EmployeeGuard>
+        <main style={styles.page}>
+          <div style={styles.card}>
+            <p>Loading...</p>
+          </div>
+        </main>
+      </EmployeeGuard>
     );
   }
 
@@ -168,7 +167,7 @@ export default function DocumentsPage() {
       <main style={styles.page}>
         <div style={styles.card}>
           <a href="/dashboard" style={styles.backButton}>
-            Back to Dashboard
+            ← Back to Dashboard
           </a>
 
           <h1 style={styles.title}>My Documents</h1>
@@ -212,9 +211,6 @@ export default function DocumentsPage() {
                       <p style={styles.docMeta}>
                         Type: {docItem.type.replaceAll("_", " ")}
                       </p>
-                      {docItem.employeeName ? (
-                        <p style={styles.docMeta}>Employee: {docItem.employeeName}</p>
-                      ) : null}
                     </div>
 
                     <a
@@ -254,7 +250,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   backButton: {
     display: "inline-block",
-    marginBottom: "20px",
+    marginBottom: "16px",
     textDecoration: "none",
     color: "#163b73",
     fontWeight: 600,

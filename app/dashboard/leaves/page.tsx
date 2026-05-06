@@ -14,11 +14,7 @@ import {
   query,
   serverTimestamp,
 } from "firebase/firestore";
-import {
-  getDownloadURL,
-  ref,
-  uploadBytes,
-} from "firebase/storage";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { auth, db, storage } from "@/lib/firebase";
 
 type LeaveItem = {
@@ -71,7 +67,7 @@ export default function LeavesPage() {
         setUserId(user.uid);
         await loadLeaves(user.uid);
       } catch (err: any) {
-        setError(err.message || "Failed to load leaves.");
+        setError(err.message || "Failed to load page.");
       } finally {
         setLoadingPage(false);
       }
@@ -86,14 +82,14 @@ export default function LeavesPage() {
       const q = query(leavesRef, orderBy("uploadedAt", "desc"));
       const snapshot = await getDocs(q);
 
-      const items: LeaveItem[] = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...(docSnap.data() as Omit<LeaveItem, "id">),
+      const items: LeaveItem[] = snapshot.docs.map((docItem) => ({
+        id: docItem.id,
+        ...(docItem.data() as Omit<LeaveItem, "id">),
       }));
 
       setLeaves(items);
     } catch (err: any) {
-      setError(err.message || "Failed to load leaves.");
+      setError(err.message || "Failed to load leave uploads.");
     }
   }
 
@@ -128,13 +124,13 @@ export default function LeavesPage() {
       });
 
       await addDoc(collection(db, "leaveUploads"), {
-        userId,
+        employeeUid: userId,
+        employeeName,
+        employeeEmail,
         type,
         fileName: file.name,
         fileUrl,
-        employeeName,
-        employeeEmail,
-        createdAt: serverTimestamp(),
+        uploadedAt: serverTimestamp(),
         done: false,
       });
 
@@ -142,10 +138,10 @@ export default function LeavesPage() {
         type: "leave_upload",
         title: "New leave uploaded",
         message: `${type.replaceAll("_", " ")} uploaded by ${employeeName || "employee"}`,
-        userId,
+        employeeUid: userId,
         employeeName,
         employeeEmail,
-        leaveType: type,
+        documentType: type,
         fileName: file.name,
         fileUrl,
         createdAt: serverTimestamp(),
@@ -165,11 +161,13 @@ export default function LeavesPage() {
 
   if (loadingPage) {
     return (
-      <main style={styles.page}>
-        <div style={styles.card}>
-          <p>Loading...</p>
-        </div>
-      </main>
+      <EmployeeGuard>
+        <main style={styles.page}>
+          <div style={styles.card}>
+            <p>Loading...</p>
+          </div>
+        </main>
+      </EmployeeGuard>
     );
   }
 
@@ -209,7 +207,7 @@ export default function LeavesPage() {
           </div>
 
           <div style={styles.section}>
-            <h2 style={styles.sectionTitle}>Uploaded Leaves</h2>
+            <h2 style={styles.sectionTitle}>Uploaded Leave Files</h2>
 
             {leaves.length === 0 ? (
               <p style={styles.emptyText}>No leave files uploaded yet.</p>
