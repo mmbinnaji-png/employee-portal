@@ -1,102 +1,173 @@
 "use client";
+
 import AdminGuard from "@/components/AdminGuard";
 import { useEffect, useState } from "react";
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-type LeaveUpload = {
+type AdminLeaveItem = {
   id: string;
   userId: string;
-  fullName: string;
   type: string;
   fileName: string;
   fileUrl: string;
-  uploadedAt?: any;
+  employeeName?: string;
+  employeeEmail?: string;
+  createdAt?: any;
+  done?: boolean;
 };
 
 export default function AdminLeavesPage() {
-  const [leaves, setLeaves] = useState<LeaveUpload[]>([]);
+  const [items, setItems] = useState<AdminLeaveItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    async function loadLeaves() {
-      try {
-        const snapshot = await getDocs(
-          query(collection(db, "leaveUploads"), orderBy("uploadedAt", "desc"))
-        );
-
-        const items: LeaveUpload[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...(doc.data() as Omit<LeaveUpload, "id">),
-        }));
-
-        setLeaves(items);
-      } catch (err: any) {
-        setError(err.message || "Failed to load leave uploads.");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadLeaves();
+    loadItems();
   }, []);
+
+  async function loadItems() {
+    try {
+      setLoading(true);
+      setError("");
+
+      const q = query(
+        collection(db, "leaveUploads"),
+        orderBy("createdAt", "desc")
+      );
+
+      const snapshot = await getDocs(q);
+
+      const results: AdminLeaveItem[] = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...(docSnap.data() as Omit<AdminLeaveItem, "id">),
+      }));
+
+      setItems(results);
+    } catch (err: any) {
+      setError(err.message || "Failed to load leave uploads.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function toggleDone(id: string, currentValue: boolean | undefined) {
+    try {
+      await updateDoc(doc(db, "leaveUploads", id), {
+        done: !currentValue,
+        updatedAt: serverTimestamp(),
+      });
+
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, done: !currentValue } : item
+        )
+      );
+    } catch (err: any) {
+      alert(err.message || "Failed to update item.");
+    }
+  }
+
+  async function handleDelete(id: string) {
+    const confirmed = window.confirm("Delete this leave upload?");
+    if (!confirmed) return;
+
+    try {
+      await deleteDoc(doc(db, "leaveUploads", id));
+      setItems((prev) => prev.filter((item) => item.id !== id));
+    } catch (err: any) {
+      alert(err.message || "Failed to delete item.");
+    }
+  }
 
   return (
     <AdminGuard>
-    <main style={styles.page}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Recent Leave Uploads</h1>
-        <p style={styles.subtitle}>Review submitted leave-related files.</p>
+      <main style={styles.page}>
+        <div style={styles.card}>
+          <a href="/admin" style={styles.backButton}>
+            ← Back to Admin Dashboard
+          </a>
 
-        {loading ? <p style={styles.info}>Loading leave uploads...</p> : null}
-        {error ? <p style={styles.error}>{error}</p> : null}
+          <h1 style={styles.title}>Recent Leave Uploads</h1>
+          <p style={styles.subtitle}>Review submitted leave-related files.</p>
 
-        {!loading && !error && leaves.length === 0 ? (
-          <p style={styles.info}>No leave uploads found.</p>
-        ) : null}
+          {loading ? <p>Loading...</p> : null}
+          {error ? <p style={styles.error}>{error}</p> : null}
 
-        <div style={styles.list}>
-          {leaves.map((leave) => (
-            <div key={leave.id} style={styles.item}>
-  <div style={styles.itemTop}>
-    <div style={styles.itemInfo}>
-      <p style={styles.name}>{leave.fullName}</p>
+          {!loading && !error && items.length === 0 ? (
+            <p style={styles.emptyText}>No leave uploads found.</p>
+          ) : null}
 
-      <p style={styles.meta}>
-        Type: {leave.type.replaceAll("_", " ")}
-      </p>
+          <div style={styles.list}>
+            {items.map((leave) => (
+              <div key={leave.id} style={styles.item}>
+                <div style={{ flex: 1 }}>
+                  <p style={styles.meta}>
+                    <strong>Type:</strong> {leave.type.replaceAll("_", " ")}
+                  </p>
+                  <p style={styles.meta}>
+                    <strong>File:</strong> {leave.fileName}
+                  </p>
+                  <p style={styles.meta}>
+                    <strong>Employee:</strong>{" "}
+                    {leave.employeeName || "Unknown employee"}
+                  </p>
+                  <p style={styles.meta}>
+                    <strong>Email:</strong>{" "}
+                    {leave.employeeEmail || "No email"}
+                  </p>
+                  <p style={styles.meta}>
+                    <strong>Status:</strong> {leave.done ? "✅ Done" : "Pending"}
+                  </p>
+                </div>
 
-      <p style={styles.meta}>File: {leave.fileName}</p>
-    </div>
-  </div>
+                <div style={styles.actions}>
+                  <a
+                    href={`/admin/employees/${leave.userId}`}
+                    style={styles.secondaryButton}
+                  >
+                    View Employee
+                  </a>
 
-  <div style={styles.itemButtons}>
-    <a
-      href={`/admin/employees/${leave.userId}`}
-      style={styles.secondaryButton}
-    >
-      View Employee
-    </a>
+                  <a
+                    href={leave.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={styles.primaryButton}
+                  >
+                    View File
+                  </a>
 
-    <a
-      href={leave.fileUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={styles.viewButton}
-    >
-      View File
-    </a>
-  </div>
-</div>
-          ))}
+                  <button
+                    type="button"
+                    style={leave.done ? styles.doneButtonActive : styles.doneButton}
+                    onClick={() => toggleDone(leave.id, leave.done)}
+                  >
+                    ✅
+                  </button>
+
+                  <button
+                    type="button"
+                    style={styles.deleteButton}
+                    onClick={() => handleDelete(leave.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-
-        <a href="/admin" style={styles.backButton}>
-          Back to Admin Dashboard
-        </a>
-      </div>
-    </main>
+      </main>
     </AdminGuard>
   );
 }
@@ -111,117 +182,112 @@ const styles: Record<string, React.CSSProperties> = {
   },
   card: {
     width: "100%",
-    maxWidth: "1000px",
+    maxWidth: "1100px",
     background: "#ffffff",
     borderRadius: "16px",
     padding: "24px",
     boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
   },
+  backButton: {
+    display: "inline-block",
+    marginBottom: "16px",
+    textDecoration: "none",
+    color: "#163b73",
+    fontWeight: 600,
+  },
   title: {
     fontSize: "32px",
     fontWeight: 700,
-    textAlign: "center",
     marginBottom: "8px",
+    textAlign: "center",
+    color: "#0f172a",
   },
   subtitle: {
-  textAlign: "center",
-  color: "#475569",
-  marginBottom: "24px",
-  fontSize: "16px",
-},
-  info: {
-  textAlign: "center",
-  color: "#475569",
-  marginBottom: "16px",
-  fontSize: "15px",
-},
-  error: {
     textAlign: "center",
+    color: "#526071",
+    marginBottom: "24px",
+  },
+  error: {
     color: "#c62828",
-    marginBottom: "16px",
+    textAlign: "center",
+    marginBottom: "12px",
+  },
+  emptyText: {
+    color: "#526071",
+    textAlign: "center",
   },
   list: {
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
+    gap: "14px",
   },
   item: {
-  border: "1px solid #dce3ee",
-  borderRadius: "16px",
-  padding: "18px",
-  background: "#ffffff",
-  display: "flex",
-  flexDirection: "column",
-  gap: "16px",
-},
-  name: {
-  margin: 0,
-  fontWeight: 800,
-  fontSize: "22px",
-  color: "#0f172a",
-  lineHeight: 1.3,
-},
+    border: "1px solid #dce3ee",
+    borderRadius: "14px",
+    padding: "18px",
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "18px",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
   meta: {
-  margin: "8px 0 0 0",
-  color: "#334155",
-  fontSize: "16px",
-  lineHeight: 1.5,
-},
+    margin: "6px 0",
+    color: "#334155",
+    fontSize: "16px",
+    textTransform: "capitalize",
+  },
   actions: {
     display: "flex",
     gap: "10px",
+    alignItems: "center",
     flexWrap: "wrap",
-    justifyContent: "flex-end",
   },
-  itemTop: {
-  display: "flex",
-  flexDirection: "column",
-},
-
-itemInfo: {
-  display: "flex",
-  flexDirection: "column",
-},
-
-itemButtons: {
-  display: "flex",
-  justifyContent: "center",
-  gap: "12px",
-  flexWrap: "wrap",
-  marginTop: "4px",
-},
-  viewButton: {
-  background: "#163b73",
-  color: "#ffffff",
-  textDecoration: "none",
-  padding: "12px 18px",
-  borderRadius: "12px",
-  fontWeight: 700,
-  whiteSpace: "nowrap",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minWidth: "140px",
-},
-  secondaryButton: {
-  background: "#eef4fb",
-  color: "#163b73",
-  textDecoration: "none",
-  padding: "12px 18px",
-  borderRadius: "12px",
-  fontWeight: 700,
-  whiteSpace: "nowrap",
-  border: "1px solid #dce3ee",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minWidth: "140px",
-},
-  backButton: {
-    display: "inline-block",
-    marginTop: "28px",
+  primaryButton: {
+    background: "#163b73",
+    color: "#ffffff",
     textDecoration: "none",
+    padding: "10px 16px",
+    borderRadius: "10px",
+    fontWeight: 600,
+    border: "none",
+    cursor: "pointer",
+  },
+  secondaryButton: {
+    background: "#e8eef8",
     color: "#163b73",
+    textDecoration: "none",
+    padding: "10px 16px",
+    borderRadius: "10px",
+    fontWeight: 600,
+    border: "1px solid #c9d6ea",
+    cursor: "pointer",
+  },
+  doneButton: {
+    background: "#ffffff",
+    color: "#0f172a",
+    border: "1px solid #cbd5e1",
+    borderRadius: "10px",
+    padding: "10px 14px",
+    cursor: "pointer",
+    fontSize: "18px",
+  },
+  doneButtonActive: {
+    background: "#dcfce7",
+    color: "#166534",
+    border: "1px solid #86efac",
+    borderRadius: "10px",
+    padding: "10px 14px",
+    cursor: "pointer",
+    fontSize: "18px",
+  },
+  deleteButton: {
+    background: "#d32f2f",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "10px",
+    padding: "10px 16px",
+    cursor: "pointer",
     fontWeight: 600,
   },
 };

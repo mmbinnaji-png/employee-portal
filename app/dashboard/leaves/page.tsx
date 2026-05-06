@@ -26,9 +26,9 @@ type LeaveItem = {
   type: string;
   fileName: string;
   fileUrl: string;
-  uploadedAt?: any;
   employeeName?: string;
   employeeEmail?: string;
+  uploadedAt?: any;
 };
 
 const leaveTypes = [
@@ -38,15 +38,17 @@ const leaveTypes = [
 ];
 
 export default function LeavesPage() {
-const router = useRouter();
-const [userId, setUserId] = useState("");
-const [employeeName, setEmployeeName] = useState("");
-const [employeeEmail, setEmployeeEmail] = useState("");
-const [loadingPage, setLoadingPage] = useState(true);
-const [uploadingType, setUploadingType] = useState("");
-const [leaves, setLeaves] = useState<LeaveItem[]>([]);
-const [error, setError] = useState("");
-const [success, setSuccess] = useState("");
+  const router = useRouter();
+
+  const [userId, setUserId] = useState("");
+  const [employeeName, setEmployeeName] = useState("");
+  const [employeeEmail, setEmployeeEmail] = useState("");
+  const [loadingPage, setLoadingPage] = useState(true);
+  const [uploadingType, setUploadingType] = useState("");
+  const [leaves, setLeaves] = useState<LeaveItem[]>([]);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
@@ -84,9 +86,9 @@ const [success, setSuccess] = useState("");
       const q = query(leavesRef, orderBy("uploadedAt", "desc"));
       const snapshot = await getDocs(q);
 
-      const items: LeaveItem[] = snapshot.docs.map((docItem) => ({
-        id: docItem.id,
-        ...(docItem.data() as Omit<LeaveItem, "id">),
+      const items: LeaveItem[] = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...(docSnap.data() as Omit<LeaveItem, "id">),
       }));
 
       setLeaves(items);
@@ -125,11 +127,22 @@ const [success, setSuccess] = useState("");
         uploadedAt: serverTimestamp(),
       });
 
+      await addDoc(collection(db, "leaveUploads"), {
+        userId,
+        type,
+        fileName: file.name,
+        fileUrl,
+        employeeName,
+        employeeEmail,
+        createdAt: serverTimestamp(),
+        done: false,
+      });
+
       await addDoc(collection(db, "notifications"), {
         type: "leave_upload",
-        title: "New leave file uploaded",
+        title: "New leave uploaded",
         message: `${type.replaceAll("_", " ")} uploaded by ${employeeName || "employee"}`,
-        employeeUid: userId,
+        userId,
         employeeName,
         employeeEmail,
         leaveType: type,
@@ -137,7 +150,7 @@ const [success, setSuccess] = useState("");
         fileUrl,
         createdAt: serverTimestamp(),
         forAdmins: true,
-        read: false,
+        done: false,
       });
 
       await loadLeaves(userId);
@@ -169,7 +182,7 @@ const [success, setSuccess] = useState("");
           </a>
 
           <h1 style={styles.title}>My Leaves</h1>
-          <p style={styles.subtitle}>Upload your leave-related files.</p>
+          <p style={styles.subtitle}>Upload your leave-related documents.</p>
 
           {error ? <p style={styles.error}>{error}</p> : null}
           {success ? <p style={styles.success}>{success}</p> : null}
@@ -196,17 +209,17 @@ const [success, setSuccess] = useState("");
           </div>
 
           <div style={styles.section}>
-            <h2 style={styles.sectionTitle}>Uploaded Leave Files</h2>
+            <h2 style={styles.sectionTitle}>Uploaded Leaves</h2>
 
             {leaves.length === 0 ? (
               <p style={styles.emptyText}>No leave files uploaded yet.</p>
             ) : (
-              <div style={styles.leaveList}>
+              <div style={styles.documentList}>
                 {leaves.map((leave) => (
-                  <div key={leave.id} style={styles.leaveItem}>
+                  <div key={leave.id} style={styles.documentItem}>
                     <div>
-                      <p style={styles.leaveName}>{leave.fileName}</p>
-                      <p style={styles.leaveMeta}>
+                      <p style={styles.docName}>{leave.fileName}</p>
+                      <p style={styles.docMeta}>
                         Type: {leave.type.replaceAll("_", " ")}
                       </p>
                     </div>
@@ -321,12 +334,12 @@ const styles: Record<string, React.CSSProperties> = {
   emptyText: {
     color: "#526071",
   },
-  leaveList: {
+  documentList: {
     display: "flex",
     flexDirection: "column",
     gap: "12px",
   },
-  leaveItem: {
+  documentItem: {
     border: "1px solid #dce3ee",
     borderRadius: "12px",
     padding: "14px",
@@ -335,12 +348,12 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     gap: "16px",
   },
-  leaveName: {
+  docName: {
     margin: 0,
     fontWeight: 600,
     color: "#0f172a",
   },
-  leaveMeta: {
+  docMeta: {
     margin: "6px 0 0 0",
     color: "#526071",
     fontSize: "14px",
